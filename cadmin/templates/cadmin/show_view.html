@@ -1,0 +1,53 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Title</title>
+    <link rel="stylesheet" href="{% static "cadmin/css/bootstrap.css" %}"/>
+    <script type="text/javascript" src="{% static 'cadmin/js/jquery-3.1.1.js' %}"></script>
+    <script type="text/javascript" src="{% static 'cadmin/js/bootstrap.js' %}"></script>
+
+</head>
+<body>
+<div class="container">
+    <h1>列表页面</h1>
+    {% if show_add_btn %}
+        <a href="{{ add_url }}">
+            <div class="btn btn-primary">Add</div>
+        </a>
+    {% endif %}
+    <table class="table table-bordered table-striped">
+        <thead>
+        <tr>
+            {% for item in head_list %}
+                <th>{{ item }}</th>
+            {% endfor %}
+        </tr>
+        </thead>
+        <tbody>
+        {% for obj in data_list %}
+            <tr>
+                {% for col in obj %}
+                    <td>{{ col }}</td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+</body>
+<script>
+    $("#choose").click(function () {
+        if ($(this).prop("checked")) {
+            $("tbody :checkbox").prop("checked", true)
+        } else {
+            $("tbody :checkbox").prop("checked", false)
+        }
+
+    })
+    ;
+</script>
+</html>

@@ -1,0 +1,18 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Modify html</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'cadmin/css/bootstrap.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'cadmin/css/cadmin-form.css' %}"/>
+    <script language="javascript" type="text/javascript"></script>
+</head>
+<body>
+<div class="container">
+    <h1>Modify html</h1>
+
+    {% include 'cadmin/cadmin-form.html' %}
+</div>
+</body>
+</html>
