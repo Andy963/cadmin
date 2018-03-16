@@ -18,7 +18,7 @@ class UserConfig(cadmin.CadminConfig):
 
 class BookConfig(cadmin.CadminConfig):
     list_display = ['id', 'name']
-
+    search_fields = ["name", ]
     show_add_btn = True
 
 

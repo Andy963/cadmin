@@ -19,6 +19,14 @@
             <div class="btn btn-primary">Add</div>
         </a>
     {% endif %}
+    {% if show_page.config.search_fields %}
+        <div class="pull-right form-group">
+            <form action="" method="get" class="form-inline">
+                <input type="text" class="form-control" name="q" value=""><input type="submit" class="btn btn-info"
+                                                                                 value="search">
+            </form>
+        </div>
+    {% endif %}
     <table class="table table-bordered table-striped">
         <thead>
         <tr>

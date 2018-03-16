@@ -22,7 +22,7 @@ class Show(object):
 
         total_count = self.all_objects.count()
         from cadmin.utils.pager import Pagination
-        pagination = Pagination(current_page, total_count,base_url, params, items_per_page=2, max_pages_count=11 )
+        pagination = Pagination(current_page, total_count, base_url, params, items_per_page=5, max_pages_count=11)
         self.pagination = pagination
         data_list = self.all_objects[self.pagination.start:self.pagination.end]
         self.data_list = data_list
@@ -50,9 +50,7 @@ class Show(object):
                 if isinstance(field_name, str):  # callable(field_name)
                     val = getattr(object, field_name)  # get the obj's value of field field_name (user's name)
                 else:
-
                     val = field_name(self.config, object)  # edit self --> BookConfig.edit get from own class first
-                    print(field_name,val)
                 temp.append(val)
             new_data_list.append(temp)
         return new_data_list
@@ -69,6 +67,8 @@ class CadminConfig(object):
     def __init__(self, model_class, site):
         self.model_class = model_class
         self.site = site
+
+    search_fields = []
 
     def get_urls(self):
         """
@@ -96,7 +96,7 @@ class CadminConfig(object):
 
     def checkbox(self, obj=None, is_header=False):
         if is_header:
-            return mark_safe('<input type="checkbox"  id="choose" />' )
+            return mark_safe('<input type="checkbox"  id="choose" />')
         return mark_safe('<input type="checkbox" name="pk" value="%s" />' % (obj.id,))
 
     def modify(self, obj=None, is_header=False):
@@ -112,13 +112,14 @@ class CadminConfig(object):
         return mark_safe('<a href="%s">delete</a>' % (self.get_delete_url(obj.id),))
 
     list_display = []
+
     def get_list_display(self):
         new_list_display = []
         if self.list_display:
             new_list_display.extend(self.list_display)
             new_list_display.append(CadminConfig.modify)
             new_list_display.append(CadminConfig.delete)
-            new_list_display.insert(0,CadminConfig.checkbox)
+            new_list_display.insert(0, CadminConfig.checkbox)
             return new_list_display
 
     model_form_class = None
@@ -165,15 +166,16 @@ class CadminConfig(object):
         return self.show_add_btn
 
     def search_view(self, request):
-        all_objects = self.model_class.objects.all()
         self.request = request
+        search_condition = self.get_search_condition()
+        all_objects = self.model_class.objects.filter(search_condition)
         show_page = Show(self, request, all_objects)
         add_url = self.get_add_url()
         show_add_btn = self.get_show_add_btn()
         context = {
-            'show_page':show_page,
-            'add_url':add_url,
-            'show_add_btn':show_add_btn,
+            'show_page': show_page,
+            'add_url': add_url,
+            'show_add_btn': show_add_btn,
 
         }
         return render(request, 'cadmin/show_view.html', context)
@@ -208,6 +210,34 @@ class CadminConfig(object):
     def delete_view(self, request, id, *args, **kwargs):
         self.model_class.objects.filter(pk=id).delete()
         return redirect(self.get_search_url())
+
+    def get_link_tag(self, obj, val):
+        params = self.request.GET
+        import copy
+        params = copy.deepcopy(params)
+        params._mutable = True
+
+        from django.http import QueryDict
+
+        qd = QueryDict(mutable=True)
+
+        qd["list_filter"] = params.urlencode()  # qd: {"list_filter":"a%21341%1234b%21322"}
+
+        s = mark_safe("<a href='%s?%s'>%s</a>" % (self.get_modify_url(obj), qd.urlencode(), val))
+
+        return s
+
+    def get_search_condition(self):
+        from django.db.models import Q
+        search_condition = Q()
+        search_condition.connector = "or"
+        if self.search_fields:
+            key_word = self.request.GET.get("q")
+            if key_word:
+                for search_field in self.search_fields:
+                    search_condition.children.append((search_field + "__contains", key_word))
+
+        return search_condition
 
 
 class CadminSite(object):
