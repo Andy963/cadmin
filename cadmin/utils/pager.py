@@ -88,10 +88,13 @@ class Pagination(object):
                     pager_end = self.current_page + self.half_max_pages_count
 
         page_html_list = []
+
         # set the first page
         self.params['page'] = 1
         first_page = '<li><a href="%s?%s">First</a></li>' % (self.base_url, self.params.urlencode(),)
         page_html_list.append(first_page)
+
+        # if has previous page set previous or disabled the button
         if self.current_page <= 1:
             pre_page = "<li class='disabled'><a href='#'>Previous</a></li>"
         else:
@@ -108,7 +111,7 @@ class Pagination(object):
                 temp = '<li><a href="%s?%s">%s</a></li>' % (self.base_url, self.params.urlencode(), i,)
             page_html_list.append(temp)
 
-        # 下一页
+        # if has next page set next or disabled it
         if self.current_page >= self.max_page_num:
             next_page = '<li class="disabled"><a href="#">Next</a></li>'
         else:
@@ -116,6 +119,7 @@ class Pagination(object):
             next_page = '<li><a href="%s?%s">Next</a></li>' % (self.base_url, self.params.urlencode(),)
         page_html_list.append(next_page)
 
+         # set the last page
         self.params['page'] = self.max_page_num
         last_page = '<li><a href="%s?%s">End</a></li>' % (self.base_url, self.params.urlencode(),)
         page_html_list.append(last_page)

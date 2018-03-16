@@ -10,6 +10,54 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 
+class Show(object):
+    def __init__(self, config, request, all_objects):
+        self.request = request
+        self.config = config
+        self.all_objects = all_objects
+
+        current_page = self.request.GET.get("page", 1)
+        base_url = self.request.path_info
+        params = self.request.GET
+
+        total_count = self.all_objects.count()
+        from cadmin.utils.pager import Pagination
+        pagination = Pagination(current_page, total_count,base_url, params, items_per_page=2, max_pages_count=11 )
+        self.pagination = pagination
+        data_list = self.all_objects[self.pagination.start:self.pagination.end]
+        self.data_list = data_list
+
+        page_html = pagination.page_html()
+
+    def get_header(self):
+        header_list = []
+        for field_name in self.config.get_list_display():
+
+            if isinstance(field_name, str):
+                verbose_name = self.config.model_class._meta.get_field(field_name).verbose_name
+            else:
+                # field_name here is a function, field_name() call the function in cadmin.UserConfig
+                verbose_name = field_name(self.config, is_header=True)  # edit(self, is_header=True)
+            header_list.append(verbose_name)
+        return header_list
+
+    def get_body(self):
+        new_data_list = []
+        for object in self.data_list:
+
+            temp = []
+            for field_name in self.config.get_list_display():
+                if isinstance(field_name, str):  # callable(field_name)
+                    val = getattr(object, field_name)  # get the obj's value of field field_name (user's name)
+                else:
+
+                    val = field_name(self.config, object)  # edit self --> BookConfig.edit get from own class first
+                    print(field_name,val)
+                temp.append(val)
+            new_data_list.append(temp)
+        return new_data_list
+
+
 class CadminConfig(object):
     """
     This is the default admin config, if you don't set a custom config in your cadmin.py, this
@@ -51,7 +99,7 @@ class CadminConfig(object):
             return mark_safe('<input type="checkbox"  id="choose" />' )
         return mark_safe('<input type="checkbox" name="pk" value="%s" />' % (obj.id,))
 
-    def edit(self, obj=None, is_header=False):
+    def modify(self, obj=None, is_header=False):
         if is_header:
             return 'Modify'
         # temp_url = "cadmin:%s_%s_modify" %(self.model_class._meta.app_label, self.model_class._meta.model_name)
@@ -68,7 +116,7 @@ class CadminConfig(object):
         new_list_display = []
         if self.list_display:
             new_list_display.extend(self.list_display)
-            new_list_display.append(CadminConfig.edit)
+            new_list_display.append(CadminConfig.modify)
             new_list_display.append(CadminConfig.delete)
             new_list_display.insert(0,CadminConfig.checkbox)
             return new_list_display
@@ -116,47 +164,19 @@ class CadminConfig(object):
     def get_show_add_btn(self):
         return self.show_add_btn
 
-    def search_view(self, request, *args, **kwargs):
-        """
-        when user register the field in list_display,you should get the data of this field and get
-        the verbose name of this field to set as title.
-        :return: head_list, data_list which field in list_display
-        """
-        # get the title
-        head_list = []
-        for field_name in self.get_list_display():
-            if isinstance(field_name, str):
-                verbose_name = self.model_class._meta.get_field(field_name).verbose_name
-            else:
-                # field_name here is a function, field_name() call the function in cadmin.UserConfig
-                verbose_name = field_name(self, is_header=True)  # edit(self, is_header=True)
-            head_list.append(verbose_name)
+    def search_view(self, request):
+        all_objects = self.model_class.objects.all()
+        self.request = request
+        show_page = Show(self, request, all_objects)
+        add_url = self.get_add_url()
+        show_add_btn = self.get_show_add_btn()
+        context = {
+            'show_page':show_page,
+            'add_url':add_url,
+            'show_add_btn':show_add_btn,
 
-        # get the field's value
-        object_list = self.model_class.objects.all()  # get all of the objects of model(User)
-        current_page = request.GET.get('page',1)
-        base_url = request.path_info
-        params =request.GET
-        total_count = object_list.count()
-        from cadmin.utils.pager import Pagination
-        pagination = Pagination(current_page, total_count,base_url, params, items_per_page=2, max_pages_count=11 )
-        page_html = pagination.page_html()
-
-        # TODO: this can be a function or property
-        object_list = object_list[pagination.start:pagination.end]
-        new_object_list = []
-        for object in object_list:
-            temp = []
-            for field_name in self.get_list_display():
-                if isinstance(field_name, str):  # callable(field_name)
-                    val = getattr(object, field_name)  # get the obj's value of field field_name (user's name)
-                else:
-                    val = field_name(self, object)  # edit self --> BookConfig.edit get from own class first
-                temp.append(val)
-            new_object_list.append(temp)
-
-        return render(request, 'cadmin/show_view.html',
-                      {'data_list': new_object_list,'page_html':page_html, 'head_list': head_list, 'add_url': self.get_add_url(),'show_add_btn':self.get_show_add_btn()})
+        }
+        return render(request, 'cadmin/show_view.html', context)
 
     def add_view(self, request, *args, **kwargs):
         model_form_class = self.get_model_form_class()
