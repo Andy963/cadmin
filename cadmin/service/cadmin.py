@@ -49,6 +49,8 @@ class Show(object):
             for field_name in self.config.get_list_display():
                 if isinstance(field_name, str):  # callable(field_name)
                     val = getattr(object, field_name)  # get the obj's value of field field_name (user's name)
+                    if field_name in self.config.list_display_links:
+                        val = self.config.get_link_tag(object, val)
                 else:
                     val = field_name(self.config, object)  # edit self --> BookConfig.edit get from own class first
                 temp.append(val)
@@ -69,6 +71,7 @@ class CadminConfig(object):
         self.site = site
 
     search_fields = []
+    list_display_links = []
 
     def get_urls(self):
         """
@@ -115,8 +118,8 @@ class CadminConfig(object):
 
     def get_list_display(self):
         new_list_display = []
-        if self.list_display:
-            new_list_display.extend(self.list_display)
+        new_list_display.extend(self.list_display)
+        if not self.list_display_links:
             new_list_display.append(CadminConfig.modify)
             new_list_display.append(CadminConfig.delete)
             new_list_display.insert(0, CadminConfig.checkbox)
