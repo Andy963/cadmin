@@ -134,6 +134,16 @@ class CadminConfig(object):
 
         # get the field's value
         object_list = self.model_class.objects.all()  # get all of the objects of model(User)
+        current_page = request.GET.get('page',1)
+        base_url = request.path_info
+        params =request.GET
+        total_count = object_list.count()
+        from cadmin.utils.pager import Pagination
+        pagination = Pagination(current_page, total_count,base_url, params, items_per_page=2, max_pages_count=11 )
+        page_html = pagination.page_html()
+
+        # TODO: this can be a function or property
+        object_list = object_list[pagination.start:pagination.end]
         new_object_list = []
         for object in object_list:
             temp = []
@@ -146,7 +156,7 @@ class CadminConfig(object):
             new_object_list.append(temp)
 
         return render(request, 'cadmin/show_view.html',
-                      {'data_list': new_object_list, 'head_list': head_list, 'add_url': self.get_add_url(),'show_add_btn':self.get_show_add_btn()})
+                      {'data_list': new_object_list,'page_html':page_html, 'head_list': head_list, 'add_url': self.get_add_url(),'show_add_btn':self.get_show_add_btn()})
 
     def add_view(self, request, *args, **kwargs):
         model_form_class = self.get_model_form_class()

@@ -3,7 +3,7 @@
 # Created by Andy @ 2018/3/13
 
 
-from django.shortcuts import HttpResponse, render
+from django.shortcuts import HttpResponse, render, redirect
 from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.conf.urls import url
@@ -65,6 +65,23 @@ class HostConfig(cadmin.CadminConfig):
 
     def report_view(self, request):
         pass
+
+    # refactor the cadminConfig function delete view
+    def delete_view(self, request,id, *args, **kwargs):
+        """
+        when click delete button redirect to the delete view to check if you really want ot delete items!
+        :param request:
+        :param id:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        if request.method == 'GET':
+            return render(request, 'cadmin/delete_view.html')
+        else:
+            self.model_class.objects.filter(pk=id).delete()
+            return redirect(self.get_search_url())
+
 
     list_display = ['ip', 'port', ip_port]
 
