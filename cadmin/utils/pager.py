@@ -90,9 +90,10 @@ class Pagination(object):
         page_html_list = []
 
         # set the first page
-        self.params['page'] = 1
-        first_page = '<li><a href="%s?%s">First</a></li>' % (self.base_url, self.params.urlencode(),)
-        page_html_list.append(first_page)
+        if self.current_page > self.max_pages_count:
+            self.params['page'] = 1
+            first_page = '<li><a href="%s?%s">First</a></li>' % (self.base_url, self.params.urlencode(),)
+            page_html_list.append(first_page)
 
         # if has previous page set previous or disabled the button
         if self.current_page <= 1:
@@ -120,8 +121,9 @@ class Pagination(object):
         page_html_list.append(next_page)
 
          # set the last page
-        self.params['page'] = self.max_page_num
-        last_page = '<li><a href="%s?%s">End</a></li>' % (self.base_url, self.params.urlencode(),)
-        page_html_list.append(last_page)
+        if self.current_page + self.max_pages_count < self. total_pages:
+            self.params['page'] = self.max_page_num
+            last_page = '<li><a href="%s?%s">End</a></li>' % (self.base_url, self.params.urlencode(),)
+            page_html_list.append(last_page)
 
         return ''.join(page_html_list)
