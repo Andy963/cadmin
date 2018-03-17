@@ -8,6 +8,7 @@ from django.conf.urls import url, include
 from django.shortcuts import HttpResponse, render, redirect
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django.http import QueryDict
 
 
 class Show(object):
@@ -69,9 +70,20 @@ class CadminConfig(object):
     def __init__(self, model_class, site):
         self.model_class = model_class
         self.site = site
+        self.request = None
+        self.params_query_key = '_list_filter'
 
     search_fields = []
     list_display_links = []
+
+    def wrap(self, func):
+        """
+        Add request for every viw
+        """
+        def inner(request, *args, **kwargs):
+            self.request = request
+            return func(request, *args, **kwargs)
+        return inner
 
     def get_urls(self):
         """
@@ -81,10 +93,10 @@ class CadminConfig(object):
         app_label, app_model_name = self.model_class._meta.app_label, self.model_class._meta.model_name
         # app_label= app name like cadmin, app_model_name = model name like user
         url_patterns = [
-            url(r'^$', self.search_view, name="%s_%s_search" % (app_label, app_model_name)),
-            url(r'^add/$', self.add_view, name="%s_%s_add" % (app_label, app_model_name)),
-            url(r'^modify/(?P<id>\d+)/$', self.modify_view, name="%s_%s_modify" % (app_label, app_model_name)),
-            url(r'^delete/(?P<id>\d+)/$', self.delete_view, name="%s_%s_delete" % (app_label, app_model_name)),
+            url(r'^$', self.wrap(self.search_view), name="%s_%s_search" % (app_label, app_model_name)),
+            url(r'^add/$', self.wrap(self.add_view), name="%s_%s_add" % (app_label, app_model_name)),
+            url(r'^modify/(?P<id>\d+)/$',self.wrap(self.modify_view), name="%s_%s_modify" % (app_label, app_model_name)),
+            url(r'^delete/(?P<id>\d+)/$', self.wrap(self.delete_view), name="%s_%s_delete" % (app_label, app_model_name)),
         ]
         return url_patterns
 
@@ -105,9 +117,14 @@ class CadminConfig(object):
     def modify(self, obj=None, is_header=False):
         if is_header:
             return 'Modify'
-        # temp_url = "cadmin:%s_%s_modify" %(self.model_class._meta.app_label, self.model_class._meta.model_name)
-        # edit_url = reverse(temp_url, args=(obj.id,))
-        return mark_safe('<a href="%s">modify</a>' % (self.get_modify_url(obj.id),))
+
+        query_str = self.request.GET.urlencode()
+        if query_str:
+            params = QueryDict(mutable=True)
+            params[self.params_query_key] = query_str
+            return  mark_safe('<a href="%s?%s">modify</a>' % (self.get_modify_url(obj.id), params.urlencode(),))
+        return mark_safe('<a href="%s">编辑</a>' % (self.get_modify_url(obj.id),))
+
 
     def delete(self, obj=None, is_header=False):
         if is_header:
@@ -167,6 +184,12 @@ class CadminConfig(object):
 
     def get_show_add_btn(self):
         return self.show_add_btn
+    actions = []
+    def get_actions(self):
+        result = []
+        if self.actions:
+            result.extend(self.actions)
+        return result
 
     def search_view(self, request):
         self.request = request
@@ -192,7 +215,9 @@ class CadminConfig(object):
             form = model_form_class(request.POST)
             if form.is_valid():
                 form.save()
-                return redirect(self.get_search_url(), )
+                list_query_str = request.Get.get("_list_filter")
+                list_url = "%s?%s" %(self.get_search_url(), list_query_str)
+                return redirect(list_url)
             return render(request, 'cadmin/add_view.html', {'form': form})
             # form = AddModelForm
 
@@ -215,6 +240,9 @@ class CadminConfig(object):
         return redirect(self.get_search_url())
 
     def get_link_tag(self, obj, val):
+        """
+        Use this to take the params at the end of the url
+        """
         params = self.request.GET
         import copy
         params = copy.deepcopy(params)
