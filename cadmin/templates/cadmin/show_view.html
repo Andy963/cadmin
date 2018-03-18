@@ -27,25 +27,37 @@
             </form>
         </div>
     {% endif %}
-    <table class="table table-bordered table-striped">
-        <thead>
-        <tr>
-            {% for item in show_page.get_header %}
-                <th>{{ item }}</th>
-            {% endfor %}
-        </tr>
-        </thead>
-        <tbody>
-        {% for obj in show_page.get_body %}
+    <form method="post">
+        {% csrf_token %}
+        {% if show_page.show_actions %}
+            <div class="form-group">
+                <select name='list_actions' class="form-control">
+                    {% for item in show_page.show_actions %}
+                        <option value={{ item.name }}>{{ item.short_desc }}</option>
+                    {% endfor %}
+                </select>
+                <button class="btn btn-primary">submit</button>
+            </div>
+        {% endif %}
+        <table class="table table-bordered table-striped">
+            <thead>
             <tr>
-                {% for col in obj %}
-                    <td>{{ col }}</td>
+                {% for item in show_page.get_header %}
+                    <th>{{ item }}</th>
                 {% endfor %}
             </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-
+            </thead>
+            <tbody>
+            {% for obj in show_page.get_body %}
+                <tr>
+                    {% for col in obj %}
+                        <td>{{ col }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </form>
     <nav aria-label="Page navigation">
         <ul class="pagination">
             {{ show_page.pagination.page_html|safe }}

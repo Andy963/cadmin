@@ -16,6 +16,7 @@ class Show(object):
         self.request = request
         self.config = config
         self.all_objects = all_objects
+        self.actions = config.get_actions()
 
         current_page = self.request.GET.get("page", 1)
         base_url = self.request.path_info
@@ -58,6 +59,13 @@ class Show(object):
             new_data_list.append(temp)
         return new_data_list
 
+    def show_actions(self):
+        result = []
+        for func in self.actions:
+            temp = {'name': func.__name__, 'short_desc': func.short_desc}
+            result.append(temp)
+        return result
+
 
 class CadminConfig(object):
     """
@@ -80,9 +88,11 @@ class CadminConfig(object):
         """
         Add request for every viw
         """
+
         def inner(request, *args, **kwargs):
             self.request = request
             return func(request, *args, **kwargs)
+
         return inner
 
     def get_urls(self):
@@ -95,8 +105,10 @@ class CadminConfig(object):
         url_patterns = [
             url(r'^$', self.wrap(self.search_view), name="%s_%s_search" % (app_label, app_model_name)),
             url(r'^add/$', self.wrap(self.add_view), name="%s_%s_add" % (app_label, app_model_name)),
-            url(r'^modify/(?P<id>\d+)/$',self.wrap(self.modify_view), name="%s_%s_modify" % (app_label, app_model_name)),
-            url(r'^delete/(?P<id>\d+)/$', self.wrap(self.delete_view), name="%s_%s_delete" % (app_label, app_model_name)),
+            url(r'^modify/(?P<id>\d+)/$', self.wrap(self.modify_view),
+                name="%s_%s_modify" % (app_label, app_model_name)),
+            url(r'^delete/(?P<id>\d+)/$', self.wrap(self.delete_view),
+                name="%s_%s_delete" % (app_label, app_model_name)),
         ]
         return url_patterns
 
@@ -122,9 +134,8 @@ class CadminConfig(object):
         if query_str:
             params = QueryDict(mutable=True)
             params[self.params_query_key] = query_str
-            return  mark_safe('<a href="%s?%s">modify</a>' % (self.get_modify_url(obj.id), params.urlencode(),))
+            return mark_safe('<a href="%s?%s">modify</a>' % (self.get_modify_url(obj.id), params.urlencode(),))
         return mark_safe('<a href="%s">编辑</a>' % (self.get_modify_url(obj.id),))
-
 
     def delete(self, obj=None, is_header=False):
         if is_header:
@@ -184,14 +195,49 @@ class CadminConfig(object):
 
     def get_show_add_btn(self):
         return self.show_add_btn
+
     actions = []
+
     def get_actions(self):
+        # get the custom actions
         result = []
+        new_actions = []
         if self.actions:
-            result.extend(self.actions)
+            for action in self.actions:
+                if isinstance(action, str):
+                    action =getattr(self, action)
+                new_actions.append(action)
+            result.extend(new_actions)
         return result
 
+    def mutil_del(self, request):
+        pk_list = request.POST.getlist('pk')
+        self.model_class.objects.filter(id__in=pk_list).delete()
+
+    mutil_del.short_desc = '批量删除'
+
+    def mutil_initial(self, request):
+        pk_list = request.POST.getlist('pk')
+        self.model_class.objects.filter(id__in=pk_list).delete()
+
+    mutil_del.short_desc = '批量删除'
+
+    show_actions = False
+
+    def get_show_actions(self):
+        return self.show_actions
+
     def search_view(self, request):
+        if request.method == 'POST' and self.get_show_actions():
+            func_name_str = request.POST.get('list_actions')
+            action_func = getattr(self, func_name_str)
+            ret = action_func(request)
+            if ret:
+                return ret
+
+            pk_list = request.POST.getlist('pk')
+            print(pk_list)
+
         self.request = request
         search_condition = self.get_search_condition()
         all_objects = self.model_class.objects.filter(search_condition)
@@ -216,7 +262,7 @@ class CadminConfig(object):
             if form.is_valid():
                 form.save()
                 list_query_str = request.Get.get("_list_filter")
-                list_url = "%s?%s" %(self.get_search_url(), list_query_str)
+                list_url = "%s?%s" % (self.get_search_url(), list_query_str)
                 return redirect(list_url)
             return render(request, 'cadmin/add_view.html', {'form': form})
             # form = AddModelForm

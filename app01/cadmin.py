@@ -22,6 +22,9 @@ class BookConfig(cadmin.CadminConfig):
     show_add_btn = True
 
 
+    actions = ['mutil_del',]
+
+
 class HostModelForm(ModelForm):
     """
     custom Host model
