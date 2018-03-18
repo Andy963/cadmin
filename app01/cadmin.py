@@ -21,14 +21,14 @@ class BookConfig(cadmin.CadminConfig):
     search_fields = ["name", ]
     show_add_btn = True
 
-
-    actions = ['mutil_del',]
+    actions = ['mutil_del', 'mutil_initial']
 
 
 class HostModelForm(ModelForm):
     """
     custom Host model
     """
+
     class Meta:
         model = models.Host
         fields = ['id', 'hostname', 'ip', 'port']
@@ -47,14 +47,9 @@ class HostModelForm(ModelForm):
 class HostConfig(cadmin.CadminConfig):
     model_form_class = HostModelForm
 
-
-
     def ip_port(self, obj=None, is_header=False):
         """
         custom method to show in html
-        :param obj:
-        :param is_header:
-        :return:
         """
         if is_header:
             return '自定义列'
@@ -70,21 +65,15 @@ class HostConfig(cadmin.CadminConfig):
         pass
 
     # refactor the cadminConfig function delete view
-    def delete_view(self, request,id, *args, **kwargs):
+    def delete_view(self, request, id, *args, **kwargs):
         """
         when click delete button redirect to the delete view to check if you really want ot delete items!
-        :param request:
-        :param id:
-        :param args:
-        :param kwargs:
-        :return:
         """
         if request.method == 'GET':
             return render(request, 'cadmin/delete_view.html')
         else:
             self.model_class.objects.filter(pk=id).delete()
             return redirect(self.get_search_url())
-
 
     list_display = ['ip', 'port', ip_port]
 

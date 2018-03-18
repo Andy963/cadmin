@@ -12,6 +12,10 @@ from django.http import QueryDict
 
 
 class Show(object):
+    """
+    render the data to show the table header , table in html
+    """
+
     def __init__(self, config, request, all_objects):
         self.request = request
         self.config = config
@@ -32,6 +36,10 @@ class Show(object):
         page_html = pagination.page_html()
 
     def get_header(self):
+        """
+        Get the table header
+        :return:
+        """
         header_list = []
         for field_name in self.config.get_list_display():
 
@@ -44,6 +52,10 @@ class Show(object):
         return header_list
 
     def get_body(self):
+        """
+        render the data in the table to show
+        :return:
+        """
         new_data_list = []
         for object in self.data_list:
 
@@ -60,6 +72,10 @@ class Show(object):
         return new_data_list
 
     def show_actions(self):
+        """
+        format a function with name and some short_desc to show in html eg: chinese desc
+        :return:
+        """
         result = []
         for func in self.actions:
             temp = {'name': func.__name__, 'short_desc': func.short_desc}
@@ -86,7 +102,7 @@ class CadminConfig(object):
 
     def wrap(self, func):
         """
-        Add request for every viw
+        Add request for every view
         """
 
         def inner(request, *args, **kwargs):
@@ -122,11 +138,18 @@ class CadminConfig(object):
         return self.get_urls()
 
     def checkbox(self, obj=None, is_header=False):
+        """
+        Add a checkbox for select items in table
+        :return:
+        """
         if is_header:
             return mark_safe('<input type="checkbox"  id="choose" />')
         return mark_safe('<input type="checkbox" name="pk" value="%s" />' % (obj.id,))
 
     def modify(self, obj=None, is_header=False):
+        """
+        Add modify(edit) url in table action
+        """
         if is_header:
             return 'Modify'
 
@@ -138,6 +161,9 @@ class CadminConfig(object):
         return mark_safe('<a href="%s">编辑</a>' % (self.get_modify_url(obj.id),))
 
     def delete(self, obj=None, is_header=False):
+        """
+        delete action in table
+        """
         if is_header:
             return 'Delete'
         return mark_safe('<a href="%s">delete</a>' % (self.get_delete_url(obj.id),))
@@ -145,6 +171,9 @@ class CadminConfig(object):
     list_display = []
 
     def get_list_display(self):
+        """
+        get the columns to show in the table if there is some action like modify delete
+        """
         new_list_display = []
         new_list_display.extend(self.list_display)
         if not self.list_display_links:
@@ -156,6 +185,9 @@ class CadminConfig(object):
     model_form_class = None
 
     def get_model_form_class(self):
+        """
+        get the current model
+        """
         if self.model_form_class:
             return self.model_class
 
@@ -171,22 +203,34 @@ class CadminConfig(object):
     # get reversed modify_url
     # Be careful: no space between cadmin and %s_%s_delete
     def get_modify_url(self, nid):
+        """
+        get modify url for the modify view to reverse
+        """
         temp_url = "cadmin:%s_%s_modify" % (self.model_class._meta.app_label, self.model_class._meta.model_name)
         modify_url = reverse(temp_url, args=(nid,))
         return modify_url
 
     def get_add_url(self):
+        """
+        get add url for the add view to reverse
+        """
         temp_url = "cadmin:%s_%s_add" % (self.model_class._meta.app_label, self.model_class._meta.model_name)
         add_url = reverse(temp_url, )
         return add_url
 
     def get_search_url(self):
+        """
+        get the search url for show all view (the default)
+        """
         temp_url = "cadmin:%s_%s_search" % (self.model_class._meta.app_label, self.model_class._meta.model_name)
         search_url = reverse(temp_url)
         return search_url
 
     # get reversed delete_url
     def get_delete_url(self, nid):
+        """
+        get delete url for delete view
+        """
         temp_url = "cadmin:%s_%s_delete" % (self.model_class._meta.app_label, self.model_class._meta.model_name)
         delete_url = reverse(temp_url, args=(nid,))
         return delete_url
@@ -194,6 +238,10 @@ class CadminConfig(object):
     show_add_btn = False
 
     def get_show_add_btn(self):
+        """
+        get whether show the add btn or not
+        :return:
+        """
         return self.show_add_btn
 
     actions = []
@@ -204,30 +252,42 @@ class CadminConfig(object):
         new_actions = []
         if self.actions:
             for action in self.actions:
-                if isinstance(action, str):
-                    action =getattr(self, action)
+                if isinstance(action, str):  # this makes add action's name str in action [] in admin
+                    action = getattr(self, action)
                 new_actions.append(action)
             result.extend(new_actions)
         return result
 
     def mutil_del(self, request):
+        """
+        delete multiple items which is selected
+        """
         pk_list = request.POST.getlist('pk')
         self.model_class.objects.filter(id__in=pk_list).delete()
 
     mutil_del.short_desc = '批量删除'
 
     def mutil_initial(self, request):
+        """
+        initial multiple items
+        """
         pk_list = request.POST.getlist('pk')
         self.model_class.objects.filter(id__in=pk_list).delete()
 
-    mutil_del.short_desc = '批量删除'
+    mutil_initial.short_desc = '批量初始化'
 
     show_actions = False
 
     def get_show_actions(self):
+        """
+        check if it's need to show actions in html
+        """
         return self.show_actions
 
     def search_view(self, request):
+        """
+        default show all data html
+        """
         if request.method == 'POST' and self.get_show_actions():
             func_name_str = request.POST.get('list_actions')
             action_func = getattr(self, func_name_str)
@@ -253,6 +313,7 @@ class CadminConfig(object):
         return render(request, 'cadmin/show_view.html', context)
 
     def add_view(self, request, *args, **kwargs):
+        # view to deal with add items
         model_form_class = self.get_model_form_class()
         if request.method == "GET":
             form = model_form_class()
@@ -268,6 +329,7 @@ class CadminConfig(object):
             # form = AddModelForm
 
     def modify_view(self, request, id, *args, **kwargs):
+        # edit items in the table
         obj = self.model_class.objects.filter(pk=id).first()
         if not obj:
             return redirect(self.get_search_url())
@@ -282,12 +344,13 @@ class CadminConfig(object):
             return render(request, 'cadmin/modify_view.html', {'form': form})
 
     def delete_view(self, request, id, *args, **kwargs):
+        # view for deal with delete items
         self.model_class.objects.filter(pk=id).delete()
         return redirect(self.get_search_url())
 
     def get_link_tag(self, obj, val):
         """
-        Use this to take the params at the end of the url
+        Use this to take the params at the end of the url, it's custom key
         """
         params = self.request.GET
         import copy
@@ -295,16 +358,13 @@ class CadminConfig(object):
         params._mutable = True
 
         from django.http import QueryDict
-
         qd = QueryDict(mutable=True)
-
         qd["list_filter"] = params.urlencode()  # qd: {"list_filter":"a%21341%1234b%21322"}
-
         s = mark_safe("<a href='%s?%s'>%s</a>" % (self.get_modify_url(obj), qd.urlencode(), val))
-
         return s
 
     def get_search_condition(self):
+        # get the user's search keyword'
         from django.db.models import Q
         search_condition = Q()
         search_condition.connector = "or"
@@ -336,6 +396,7 @@ class CadminSite(object):
         self._registry[model_class] = cadmin_config_class(model_class, self)
 
     def get_urls(self):
+        # get urls by url method
         url_pattern = []
         for model_class, cadmin_config_obj in self._registry.items():  # {User: UserConfig}
             app_name, model_name = model_class._meta.app_label, model_class._meta.model_name
