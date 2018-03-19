@@ -77,7 +77,48 @@ class HostConfig(cadmin.CadminConfig):
 
     list_display = ['ip', 'port', ip_port]
 
+class RoleConfig(cadmin.CadminConfig):
+    list_display = ['id','title']
+    show_add_btn = True
+
+class DepartmentConfig(cadmin.CadminConfig):
+    list_display = ['id','caption']
+    show_add_btn = True
+
+class UserInfoConfig(cadmin.CadminConfig):
+    def display_gender(self, obj=None, is_header=False):
+        if is_header:
+            return 'gender'
+        return obj.get_gender_display()
+    def display_roles(self,obj=None, is_header=False):
+        if is_header:
+            return 'role'
+
+        show_role = []
+        roles = obj.role.all()
+        for role in roles:
+            show_role.append(role.title)
+        return ','.join(show_role)
+
+    # combine_filter = ['gender','depart','role']
+    combine_filter =[
+        cadmin.FilterOption('gender', is_choice=True),
+        cadmin.FilterOption('depart'),
+        cadmin.FilterOption('role',True),
+    ]
+
+    list_display = ['name','email', display_gender,'depart', display_roles]
+    show_add_btn = True
+
+class UserTypeConfig(cadmin.CadminConfig):
+    list_display = ['type']
+    show_add_btn = True
+
 
 cadmin.site.register(models.User, UserConfig)
 cadmin.site.register(models.Book, BookConfig)
 cadmin.site.register(models.Host, HostConfig)
+cadmin.site.register(models.Role, RoleConfig)
+cadmin.site.register(models.Department, DepartmentConfig)
+cadmin.site.register(models.UserInfo, UserInfoConfig)
+cadmin.site.register(models.UserType, UserTypeConfig)

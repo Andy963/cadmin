@@ -9,6 +9,18 @@
     <link rel="stylesheet" href="{% static "cadmin/css/bootstrap.css" %}"/>
     <script type="text/javascript" src="{% static 'cadmin/js/jquery-3.1.1.js' %}"></script>
     <script type="text/javascript" src="{% static 'cadmin/js/bootstrap.js' %}"></script>
+    <style>
+        .list-filter a{
+            display: inline-block;
+            padding:3px 5px;
+            border:1px solid #1b6d85;
+            margin:3px;
+        }
+        .list-filter a.active{
+            background-color: #1b6d85;
+            color:white;
+        }
+    </style>
 
 </head>
 <body>
@@ -30,15 +42,24 @@
     <form method="post">
         {% csrf_token %}
         {% if show_page.show_actions %}
-            <div class="form-group">
+            <div class="form-group col-md-2 form-inline">
                 <select name='list_actions' class="form-control">
                     {% for item in show_page.show_actions %}
                         <option value={{ item.name }}>{{ item.short_desc }}</option>
                     {% endfor %}
                 </select>
-                <button class="btn btn-primary">submit</button>
+                <button class="btn btn-primary form-control">submit</button>
             </div>
         {% endif %}
+        <div class="list-filter">
+            {% for filterrow in gen_com_filter %}
+                <div>
+                    {% for col in filterrow %}
+                        {{ col }}
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
         <table class="table table-bordered table-striped">
             <thead>
             <tr>

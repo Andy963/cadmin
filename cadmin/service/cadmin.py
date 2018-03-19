@@ -9,6 +9,7 @@ from django.shortcuts import HttpResponse, render, redirect
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.http import QueryDict
+import copy
 
 
 class Show(object):
@@ -81,6 +82,73 @@ class Show(object):
             temp = {'name': func.__name__, 'short_desc': func.short_desc}
             result.append(temp)
         return result
+
+
+class FilterOption(object):
+    def __init__(self, field_name, multi=False, condition=None, is_choice=False):
+        self.field_name = field_name
+        self.multi = multi
+        self.is_choice = is_choice
+        self.condition = condition
+
+    def get_queryset(self, _field):
+        if self.condition:
+            return _field.rel.to.objects.filter(self.condition)
+        return _field.rel.to.objects.all()
+
+    def get_choices(self, _field):
+        return _field.choices
+
+class FilterRow(object):
+    def __init__(self, option,data, request):
+        self.data = data
+        self.option = option
+        self.request = request
+
+    def __iter__(self):
+        params = copy.deepcopy(self.request.GET)
+        params._mutable = True
+        current_id = params.get(self.option.field_name)
+        current_id_list = params.getlist(self.option.field_name)
+
+        if self.option.field_name in params:
+            origin_list = params.pop(self.option.field_name)
+            url = "{0}?{1}".format(self.request.path_info, params.urlencode())
+            yield mark_safe('<a href="{0}">all</a>'.format(url))
+            params.setlist(self.option.field_name, origin_list)
+        else:
+            url = "{0}?{1}".format(self.request.path_info, params.urlencode())
+            yield mark_safe('<a class="active" href="{0}">all</a>'.format(url))
+        for val in self.data:
+            if self.option.is_choice:
+                pk, text = str(val[0]), val[1]
+            else:
+                pk, text = str(val.pk), str(val)
+            if not self.option.multi:
+                params[self.option.field_name] = pk
+                url = "{0}?{1}".format(self.request.path_info, params.urlencode())
+                if current_id == pk:
+                    yield mark_safe("<a class='active' href='{0}'>{1}</a>".format(url, text))
+                else:
+                    yield mark_safe("<a href='{0}'>{1}</a>".format(url, text))
+
+            else:
+                _params = copy.deepcopy(params)
+                id_list = _params.getlist(self.option.field_name)
+
+                if pk in current_id_list:
+                    id_list.remove(pk)
+                    _params.setlist(self.option.field_name, id_list)
+                    url = "{0}?{1}".format(self.request.path_info, _params.urlencode())
+                    yield  mark_safe("<a class='active' href='{0}'>{1}</a>".format(url, text))
+                else:
+
+                    id_list.append(pk)
+
+                    _params.setlist(self.option.field_name, id_list)
+                    url = "{0}?{1}".format(self.request.path_info, _params.urlencode())
+                    yield mark_safe("<a  href='{0}'>{1}</a>".format(url, text))
+
 
 
 class CadminConfig(object):
@@ -278,11 +346,40 @@ class CadminConfig(object):
 
     show_actions = False
 
+    combine_filter = []
+
+    def get_com_filter(self):
+        result = []
+        if self.combine_filter:
+            result.extend(self.combine_filter)
+        return result
+
+    def gen_com_filter(self):
+        # data_list = []
+        from django.db.models import ForeignKey, ManyToManyField
+        for option in self.combine_filter:
+            _fields = self.model_class._meta.get_field(option.field_name)
+
+            if isinstance(_fields, ForeignKey):
+                row = FilterRow(option, option.get_queryset(_fields), self.request)
+                # data_list.append(row)
+            elif isinstance(_fields, ManyToManyField):
+                row = FilterRow(option,option.get_queryset(_fields),self.request)
+                # data_list.append(row)
+            else:
+                row = FilterRow(option, option.get_choices(_fields),self.request)
+                # data_list.append(row)
+
+            yield row
+        # return data_list
+
+
     def get_show_actions(self):
         """
         check if it's need to show actions in html
         """
         return self.show_actions
+
 
     def search_view(self, request):
         """
@@ -296,21 +393,39 @@ class CadminConfig(object):
                 return ret
 
             pk_list = request.POST.getlist('pk')
-            print(pk_list)
+
 
         self.request = request
         search_condition = self.get_search_condition()
-        all_objects = self.model_class.objects.filter(search_condition)
+
+        combine_condition = {}
+        option_list = self.get_com_filter()
+        for key in request.GET.keys():
+            value_list = request.GET.getlist(key)
+            flag = False
+            for option in option_list:
+                if option.field_name == key:
+                    flag = True
+                    break
+            if flag:
+                combine_condition["%s__in"%key] = value_list
+
+        all_objects = self.model_class.objects.filter(search_condition).filter(**combine_condition).distinct()
         show_page = Show(self, request, all_objects)
         add_url = self.get_add_url()
         show_add_btn = self.get_show_add_btn()
+        gen_com_filter = self.gen_com_filter()
+        print(show_page.get_header())
+        print(show_page.get_body())
+
         context = {
             'show_page': show_page,
             'add_url': add_url,
             'show_add_btn': show_add_btn,
-
+            'gen_com_filter': gen_com_filter,
         }
         return render(request, 'cadmin/show_view.html', context)
+
 
     def add_view(self, request, *args, **kwargs):
         # view to deal with add items
@@ -322,11 +437,12 @@ class CadminConfig(object):
             form = model_form_class(request.POST)
             if form.is_valid():
                 form.save()
-                list_query_str = request.Get.get("_list_filter")
+                list_query_str = request.GET.get("_list_filter")
                 list_url = "%s?%s" % (self.get_search_url(), list_query_str)
                 return redirect(list_url)
             return render(request, 'cadmin/add_view.html', {'form': form})
             # form = AddModelForm
+
 
     def modify_view(self, request, id, *args, **kwargs):
         # edit items in the table
@@ -343,10 +459,12 @@ class CadminConfig(object):
                 return redirect(self.get_search_url())
             return render(request, 'cadmin/modify_view.html', {'form': form})
 
+
     def delete_view(self, request, id, *args, **kwargs):
         # view for deal with delete items
         self.model_class.objects.filter(pk=id).delete()
         return redirect(self.get_search_url())
+
 
     def get_link_tag(self, obj, val):
         """
@@ -362,6 +480,7 @@ class CadminConfig(object):
         qd["list_filter"] = params.urlencode()  # qd: {"list_filter":"a%21341%1234b%21322"}
         s = mark_safe("<a href='%s?%s'>%s</a>" % (self.get_modify_url(obj), qd.urlencode(), val))
         return s
+
 
     def get_search_condition(self):
         # get the user's search keyword'
