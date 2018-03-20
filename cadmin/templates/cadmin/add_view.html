@@ -1,4 +1,5 @@
 {% load staticfiles %}
+{% load change_form %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,7 +13,8 @@
 <div class="container">
     <h1>Add html</h1>
 
-    {% include 'cadmin/cadmin-form.html' %}
+    {% form form %}
+{#    the first form is a templatetag#}
 </div>
 </body>
 </html>

@@ -10,15 +10,16 @@
     <script type="text/javascript" src="{% static 'cadmin/js/jquery-3.1.1.js' %}"></script>
     <script type="text/javascript" src="{% static 'cadmin/js/bootstrap.js' %}"></script>
     <style>
-        .list-filter a{
+        .list-filter a {
             display: inline-block;
-            padding:3px 5px;
-            border:1px solid #1b6d85;
-            margin:3px;
+            padding: 3px 5px;
+            border: 1px solid #1b6d85;
+            margin: 3px;
         }
-        .list-filter a.active{
+
+        .list-filter a.active {
             background-color: #1b6d85;
-            color:white;
+            color: white;
         }
     </style>
 
@@ -26,11 +27,7 @@
 <body>
 <div class="container">
     <h1>列表页面</h1>
-    {% if show_add_btn %}
-        <a href="{{ add_url }}">
-            <div class="btn btn-primary">Add</div>
-        </a>
-    {% endif %}
+{#search #}
     {% if show_page.config.search_fields %}
         <div class="pull-right form-group">
             <form action="" method="get" class="form-inline">
@@ -39,6 +36,7 @@
             </form>
         </div>
     {% endif %}
+{# action#}
     <form method="post">
         {% csrf_token %}
         {% if show_page.show_actions %}
@@ -51,6 +49,7 @@
                 <button class="btn btn-primary form-control">submit</button>
             </div>
         {% endif %}
+{#    filter#}
         <div class="list-filter">
             {% for filterrow in gen_com_filter %}
                 <div>
@@ -60,6 +59,13 @@
                 </div>
             {% endfor %}
         </div>
+{#    add btn#}
+        {% if show_add_btn %}
+            <a href="{{ add_url }}">
+                <div class="btn btn-primary">Add</div>
+            </a>
+        {% endif %}
+{#    main table#}
         <table class="table table-bordered table-striped">
             <thead>
             <tr>

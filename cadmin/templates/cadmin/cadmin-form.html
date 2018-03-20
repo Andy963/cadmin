@@ -1,12 +1,15 @@
 <form method="post"  class="form-horizontal" novalidate>
     {% csrf_token %}
-    {% for field in form %}
+    {% for dic in form %}
         <div class="col-sm-6">
             <div class="form-group">
-                <label for="inputEmail3" class="col-sm-2 control-label">{{ field.label }}</label>
+                <label for="inputEmail3" class="col-sm-2 control-label">{{ dic.item.field.label }}</label>
                 <div class="col-sm-10">
-                    {{ field }}
-                    {{ field.errors.0 }}
+                {{ dic.item }}
+                    {% if dic.is_popup %}
+                        <a onclick="popUp('{{ dic.popurl }}')">Add</a>
+                    {% endif %}
+                    {{ dic.item.field.errors.0 }}
                 </div>
             </div>
         </div>
@@ -17,3 +20,16 @@
 
 
 </form>
+<script>
+    function  popupCallback(dic) {
+        var op = document.createElement('option');
+        op.value = dic.id;
+        op.text = dic.text;
+        op.setAttribute('selected', 'selected');
+        document.getElementById(dic.popbackid ).appendChild(op);
+    }
+    function popUp(url) {
+        var popUpPage = window.open(url, url, 'status=1, height:300, width:200, toolbar=0, resizeable=0')
+        
+    }
+</script>

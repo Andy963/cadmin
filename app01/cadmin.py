@@ -104,6 +104,12 @@ class UserInfoConfig(cadmin.CadminConfig):
             show_role.append(role.title)
         return ','.join(show_role)
 
+    list_display = ['id', 'name']
+    search_fields = ["name", ]
+    show_add_btn = True
+
+    actions = ['mutil_del', 'mutil_initial']
+
     # combine_filter = ['gender','depart','role'], when we choose different condition we should conbine it to filter
     # and we need to check if it's a choice field or one2many many2many field
     combine_filter =[
