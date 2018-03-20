@@ -86,11 +86,15 @@ class DepartmentConfig(cadmin.CadminConfig):
     show_add_btn = True
 
 class UserInfoConfig(cadmin.CadminConfig):
+
     def display_gender(self, obj=None, is_header=False):
+        # show choice field value but not the short key
         if is_header:
             return 'gender'
-        return obj.get_gender_display()
+        return obj.get_gender_display() # gender is a choice field use get_field_display to get choices
+
     def display_roles(self,obj=None, is_header=False):
+        # role is Many2many field, object.role.all to get all of the role of the obj, then do loop add to a list to show in html
         if is_header:
             return 'role'
 
@@ -100,18 +104,23 @@ class UserInfoConfig(cadmin.CadminConfig):
             show_role.append(role.title)
         return ','.join(show_role)
 
-    # combine_filter = ['gender','depart','role']
+    # combine_filter = ['gender','depart','role'], when we choose different condition we should conbine it to filter
+    # and we need to check if it's a choice field or one2many many2many field
     combine_filter =[
         cadmin.FilterOption('gender', is_choice=True),
         cadmin.FilterOption('depart'),
         cadmin.FilterOption('role',True),
     ]
 
+
+    # we difined the display_gender, display_roles function to show choice field, many2many field 
+    # TODO: we can set a default display fucntion in cadmin , when we need to do this just herit from it , or overwrite ti
     list_display = ['name','email', display_gender,'depart', display_roles]
-    show_add_btn = True
+
+    show_add_btn = True # add new userinfo button
 
 class UserTypeConfig(cadmin.CadminConfig):
-    list_display = ['type']
+    list_display = ['type'  ]
     show_add_btn = True
 
 

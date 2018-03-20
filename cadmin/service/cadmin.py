@@ -85,6 +85,7 @@ class Show(object):
 
 
 class FilterOption(object):
+     # config of filter
     def __init__(self, field_name, multi=False, condition=None, is_choice=False):
         self.field_name = field_name
         self.multi = multi
@@ -92,24 +93,27 @@ class FilterOption(object):
         self.condition = condition
 
     def get_queryset(self, _field):
+        # if condition we should filter it
         if self.condition:
-            return _field.rel.to.objects.filter(self.condition)
+            return _field.rel.to.objects.filter(self.condition) # filter related objects with condition
         return _field.rel.to.objects.all()
 
     def get_choices(self, _field):
+        # check all of the choice in a choice field
         return _field.choices
 
 class FilterRow(object):
+    # one row of combination filter
     def __init__(self, option,data, request):
         self.data = data
-        self.option = option
-        self.request = request
+        self.option = option # todo: what option means here
+        self.request = request # use to get the current url
 
     def __iter__(self):
         params = copy.deepcopy(self.request.GET)
         params._mutable = True
         current_id = params.get(self.option.field_name)
-        current_id_list = params.getlist(self.option.field_name)
+        current_id_list = params.getlist(self.option.field_name) #multiple value use getlist
 
         if self.option.field_name in params:
             origin_list = params.pop(self.option.field_name)
@@ -415,8 +419,6 @@ class CadminConfig(object):
         add_url = self.get_add_url()
         show_add_btn = self.get_show_add_btn()
         gen_com_filter = self.gen_com_filter()
-        print(show_page.get_header())
-        print(show_page.get_body())
 
         context = {
             'show_page': show_page,
