@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Title</title>
+    <title>{{ model_str }}</title>
     <link rel="stylesheet" href="{% static "cadmin/css/bootstrap.css" %}"/>
     <script type="text/javascript" src="{% static 'cadmin/js/jquery-3.1.1.js' %}"></script>
     <script type="text/javascript" src="{% static 'cadmin/js/bootstrap.js' %}"></script>
@@ -14,11 +14,11 @@
             display: inline-block;
             padding: 3px 5px;
             border: 1px solid #1b6d85;
-            margin: 3px;
+            margin: 10px 5px;
         }
 
         .list-filter a.active {
-            background-color: #1b6d85;
+            background-color: #337ab7;
             color: white;
         }
     </style>
@@ -26,8 +26,8 @@
 </head>
 <body>
 <div class="container">
-    <h1>列表页面</h1>
-{#search #}
+    <h1>{{  model_str }}</h1>
+    {#search #}
     {% if show_page.config.search_fields %}
         <div class="pull-right form-group">
             <form action="" method="get" class="form-inline">
@@ -36,36 +36,40 @@
             </form>
         </div>
     {% endif %}
-{# action#}
+
+    {#    filter#}
+    <div class="list-filter">
+        {% for filterrow in gen_com_filter %}
+            <div>
+                {% for col in filterrow %}
+                    {{ col }}
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+
     <form method="post">
         {% csrf_token %}
-        {% if show_page.show_actions %}
-            <div class="form-group col-md-2 form-inline">
-                <select name='list_actions' class="form-control">
-                    {% for item in show_page.show_actions %}
-                        <option value={{ item.name }}>{{ item.short_desc }}</option>
-                    {% endfor %}
-                </select>
-                <button class="btn btn-primary form-control">submit</button>
-            </div>
-        {% endif %}
-{#    filter#}
-        <div class="list-filter">
-            {% for filterrow in gen_com_filter %}
-                <div>
-                    {% for col in filterrow %}
-                        {{ col }}
-                    {% endfor %}
+        {# action#}
+        <div class="row">
+            {% if get_show_actions %}
+                <div class="form-group col-md-4">
+                    <select name='list_actions' class="form-control " style="display: inline">
+                        {% for item in show_page.show_actions %}
+                            <option value={{ item.name }}>{{ item.short_desc }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-            {% endfor %}
+                <button class="btn btn-primary " style="padding-right:10px;">Go</button>
+            {% endif %}
+            {#    add btn#}
+            {% if show_add_btn %}
+                <a href="{{ add_url }}">
+                    <div class="btn btn-primary pull-right" style="margin-right:14px;">Add</div>
+                </a>
+            {% endif %}
         </div>
-{#    add btn#}
-        {% if show_add_btn %}
-            <a href="{{ add_url }}">
-                <div class="btn btn-primary">Add</div>
-            </a>
-        {% endif %}
-{#    main table#}
+        {#    main table#}
         <table class="table table-bordered table-striped">
             <thead>
             <tr>
@@ -95,6 +99,7 @@
 
 </body>
 <script>
+{#    select all#}
     $("#choose").click(function () {
         if ($(this).prop("checked")) {
             $("tbody :checkbox").prop("checked", true)

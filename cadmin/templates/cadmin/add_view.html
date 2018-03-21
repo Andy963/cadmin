@@ -4,16 +4,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Add View</title>
+    <title>ADD {{ model_str }}</title>
     <link rel="stylesheet" type="text/css" href="{% static 'cadmin/css/bootstrap.css' %}"/>
     <link rel="stylesheet" type="text/css" href="{% static 'cadmin/css/cadmin-form.css' %}"/>
     <script language="javascript" type="text/javascript"></script>
 </head>
 <body>
-<div class="container">
-    <h1>Add html</h1>
+<div class="container ">
+    <h1>Add {{ model_str }}</h1>
+    <div class="input-group ">
+        {% form form %}
+    </div>
+</div>
 
-    {% form form %}
 {#    the first form is a templatetag#}
 </div>
 </body>
