@@ -55,7 +55,6 @@ class Show(object):
     def get_body(self):
         """
         render the data in the table to show
-        :return:
         """
         new_data_list = []
         for object in self.data_list:
@@ -64,8 +63,8 @@ class Show(object):
             for field_name in self.config.get_list_display():
                 if isinstance(field_name, str):  # callable(field_name)
                     val = getattr(object, field_name)  # get the obj's value of field field_name (user's name)
-                    if field_name in self.config.list_display_links:
-                        val = self.config.get_link_tag(object, val)
+                    # if field_name in self.config.list_display_links:
+                    #     val = self.config.get_link_tag(object, val)
                 else:
                     val = field_name(self.config, object)  # edit self --> BookConfig.edit get from own class first
                 temp.append(val)
@@ -160,23 +159,22 @@ class CadminConfig(object):
     This is the default admin config, if you don't set a custom config in your cadmin.py, this
     conifg will work.
     In cadmin.py eg: cadmin.site.register(Book), in CadminSite.regsiter(self, model_class, cadmin_config_class=None)
-    the cadmin_config_class will set to CadminConfig
+    the cadmin_config_class will set to this
     """
 
     def __init__(self, model_class, site):
+        # params_query_key: combine the action url for a tag in the table eg: modify, delte ect.
         self.model_class = model_class
         self.site = site
         self.request = None
         self.params_query_key = '_list_filter'
 
-    search_fields = []
-    list_display_links = []
+
 
     def wrap(self, func):
         """
-        Add request for every view
+        decorator Add request for every view
         """
-
         def inner(request, *args, **kwargs):
             self.request = request
             return func(request, *args, **kwargs)
@@ -209,14 +207,7 @@ class CadminConfig(object):
         """
         return self.get_urls()
 
-    def checkbox(self, obj=None, is_header=False):
-        """
-        Add a checkbox for select items in table
-        :return:
-        """
-        if is_header:
-            return mark_safe('<input type="checkbox"  id="choose" />')
-        return mark_safe('<input type="checkbox" name="pk" value="%s" />' % (obj.id,))
+
 
     def modify(self, obj=None, is_header=False):
         """
@@ -227,10 +218,11 @@ class CadminConfig(object):
 
         query_str = self.request.GET.urlencode()
         if query_str:
+            # if there already have some filter options combine it into params
             params = QueryDict(mutable=True)
             params[self.params_query_key] = query_str
-            return mark_safe('<a href="%s?%s">modify</a>' % (self.get_modify_url(obj.id), params.urlencode(),))
-        return mark_safe('<a href="%s">编辑</a>' % (self.get_modify_url(obj.id),))
+            return mark_safe('<a href="%s?%s">Modify</a>' % (self.get_modify_url(obj.id), params.urlencode(),))
+        return mark_safe('<a href="%s">Modify</a>' % (self.get_modify_url(obj.id),))
 
     def delete(self, obj=None, is_header=False):
         """
@@ -240,47 +232,44 @@ class CadminConfig(object):
             return 'Delete'
         return mark_safe('<a href="%s">delete</a>' % (self.get_delete_url(obj.id),))
 
+    # list_display_links = []
     list_display = []
 
     def get_list_display(self):
         """
         get the columns to show in the table if there is some action like modify delete
+        if some field to show add modify delete links to do actions.
         """
         new_list_display = []
-        new_list_display.extend(self.list_display)
-        if not self.list_display_links:
+        if self.list_display:
+            new_list_display.extend(self.list_display)
             new_list_display.append(CadminConfig.modify)
             new_list_display.append(CadminConfig.delete)
             new_list_display.insert(0, CadminConfig.checkbox)
-            return new_list_display
+        return new_list_display
 
     model_form_class = None
 
     def get_model_form_class(self):
         """
-        get the current model
+        Use ModelForm, get the current model
         """
         if self.model_form_class:
             return self.model_class
 
         class TestModelForm(ModelForm):
+            """
+            use ModelForm to render form
+            """
             class Meta:
                 model = self.model_class
                 fields = "__all__"
-
         # meta = type("Meta", (object,),{'model':self.model_class, 'fields':'__all__'})
         # TestModelForm = type('TestModelForm',(ModelForm,), {'Meta':meta})
         return TestModelForm
 
     # get reversed modify_url
     # Be careful: no space between cadmin and %s_%s_delete
-    def get_modify_url(self, nid):
-        """
-        get modify url for the modify view to reverse
-        """
-        temp_url = "cadmin:%s_%s_modify" % (self.model_class._meta.app_label, self.model_class._meta.model_name)
-        modify_url = reverse(temp_url, args=(nid,))
-        return modify_url
 
     def get_add_url(self):
         """
@@ -289,7 +278,20 @@ class CadminConfig(object):
         temp_url = "cadmin:%s_%s_add" % (self.model_class._meta.app_label, self.model_class._meta.model_name)
         add_url = reverse(temp_url, )
         return add_url
-
+    def get_delete_url(self, nid):
+        """
+        get delete url for delete view
+        """
+        temp_url = "cadmin:%s_%s_delete" % (self.model_class._meta.app_label, self.model_class._meta.model_name)
+        delete_url = reverse(temp_url, args=(nid,))
+        return delete_url
+    def get_modify_url(self, nid):
+        """
+        get modify url for the modify view to reverse
+        """
+        temp_url = "cadmin:%s_%s_modify" % (self.model_class._meta.app_label, self.model_class._meta.model_name)
+        modify_url = reverse(temp_url, args=(nid,))
+        return modify_url
     def get_search_url(self):
         """
         get the search url for show all view (the default)
@@ -298,14 +300,13 @@ class CadminConfig(object):
         search_url = reverse(temp_url)
         return search_url
 
-    # get reversed delete_url
-    def get_delete_url(self, nid):
+    def checkbox(self, obj=None, is_header=False):
         """
-        get delete url for delete view
+        Add a checkbox for select items in table
         """
-        temp_url = "cadmin:%s_%s_delete" % (self.model_class._meta.app_label, self.model_class._meta.model_name)
-        delete_url = reverse(temp_url, args=(nid,))
-        return delete_url
+        if is_header:
+            return mark_safe('<input type="checkbox"  id="choose" />')
+        return mark_safe('<input type="checkbox" name="pk" value="%s" />' % (obj.id,))
 
     show_add_btn = False
 
@@ -329,57 +330,59 @@ class CadminConfig(object):
                 new_actions.append(action)
             result.extend(new_actions)
         return result
-
-    def mutil_del(self, request):
+    def multi_del(self, request):
         """
         delete multiple items which is selected
         """
-        pk_list = request.POST.getlist('pk')
-        self.model_class.objects.filter(id__in=pk_list).delete()
+        self.getlist = request.POST.getlist('pk') # getlist to get multiple  selected items
+        pk_list = self.getlist
+        self.model_class.objects.filter(id__in=pk_list).delete() # if the id in pk_list delete it
+    multi_del.short_desc = 'Delete Multiple items'
 
-    mutil_del.short_desc = '批量删除'
 
-    def mutil_initial(self, request):
+    def multi_init(self, request):
         """
         initial multiple items
         """
         pk_list = request.POST.getlist('pk')
-        self.model_class.objects.filter(id__in=pk_list).delete()
+        pass
+        # TODO: need finish
+        # self.model_class.objects.filter(id__in=pk_list).delete()
+    multi_init.short_desc = 'Initial Multiple items'
 
-    mutil_initial.short_desc = '批量初始化'
-
-    show_actions = False
 
     combine_filter = []
 
     def get_com_filter(self):
+        # get combined condition to filter items
         result = []
         if self.combine_filter:
             result.extend(self.combine_filter)
         return result
 
     def gen_com_filter(self):
+        """
+        A generator to generate the result of filter result
+        """
         # data_list = []
         from django.db.models import ForeignKey, ManyToManyField
         for option in self.combine_filter:
             _fields = self.model_class._meta.get_field(option.field_name)
-
+            # _fields --> app01.UserInfo.gender
             if isinstance(_fields, ForeignKey):
                 row = FilterRow(option, option.get_queryset(_fields), self.request)
-                # data_list.append(row)
             elif isinstance(_fields, ManyToManyField):
                 row = FilterRow(option, option.get_queryset(_fields), self.request)
-                # data_list.append(row)
             else:
                 row = FilterRow(option, option.get_choices(_fields), self.request)
-                # data_list.append(row)
 
-            yield row
-            # return data_list
 
+            yield row # return data_list
+
+    show_actions = False
     def get_show_actions(self):
         """
-        check if it's need to show actions in html
+        check if it's need to show actions in html, like Multi del
         """
         return self.show_actions
 
@@ -387,34 +390,39 @@ class CadminConfig(object):
         """
         default show all data html
         """
-        if request.method == 'POST' and self.get_show_actions():
-            func_name_str = request.POST.get('list_actions')
+        if request.method == 'POST' and self.get_show_actions(): # use multi del action 
+            func_name_str = request.POST.get('list_actions') # the name of select tags in html, fun_name like multi del
             action_func = getattr(self, func_name_str)
-            ret = action_func(request)
-            if ret:
-                return ret
+            result = action_func(request)
 
-            pk_list = request.POST.getlist('pk')
+            if result:
+                return result
+
+            # pk_list = request.POST.getlist('pk')
 
         self.request = request
         search_condition = self.get_search_condition()
 
         combine_condition = {}
-        option_list = self.get_com_filter()
+        option_list = self.get_com_filter() # condition list for filter
+        # print(request.GET.keys())  --> dict_keys(['depart', 'gender']), field name to filter
+        # loop all of the condition if it's equal to hte selected one then add to the combine conditon
         for key in request.GET.keys():
-            value_list = request.GET.getlist(key)
+            value_list = request.GET.getlist(key) # items's were selected get the value
             flag = False
             for option in option_list:
+                print(option.field_name)
                 if option.field_name == key:
                     flag = True
                     break
             if flag:
                 combine_condition["%s__in" % key] = value_list
-
+        # use the search condition and filter condition to filter
         all_objects = self.model_class.objects.filter(search_condition).filter(**combine_condition).distinct()
         show_page = Show(self, request, all_objects)
         add_url = self.get_add_url()
         show_add_btn = self.get_show_add_btn()
+        get_show_actions = self.get_show_actions()
         gen_com_filter = self.gen_com_filter()
 
         context = {
@@ -422,36 +430,35 @@ class CadminConfig(object):
             'add_url': add_url,
             'show_add_btn': show_add_btn,
             'gen_com_filter': gen_com_filter,
+            'get_show_actions': get_show_actions,
         }
         return render(request, 'cadmin/show_view.html', context)
 
     def add_view(self, request, *args, **kwargs):
-        # view to deal with add items
+        """
+        view to deal with add items
+        """
         model_form_class = self.get_model_form_class()
         _popbackid = request.GET.get('_popbackid')
 
         if request.method == "GET":
             form = model_form_class()
-
             return render(request, 'cadmin/add_view.html', {'form': form})
         else:
             form = model_form_class(request.POST)
-
             if form.is_valid():
                 new_obj = form.save()
                 if _popbackid:
                     result = {'id':new_obj.pk, 'text':str(new_obj), 'popbackid':_popbackid}
-                    # list_query_str = request.GET.get("_list_filter")
-                    # list_url = "%s?%s" % (self.get_search_url(), list_query_str)
-                    # return redirect(list_url)
                     return render(request, 'cadmin/popup_response.html',{'json_result':json.dumps(result, ensure_ascii=False)})
                 else:
                     return redirect(self.get_search_url())
             return render(request, 'cadmin/add_view.html', {'form': form})
-            # form = AddModelForm
 
     def modify_view(self, request, id, *args, **kwargs):
-        # edit items in the table
+        """
+        edit items in the table
+        """
         obj = self.model_class.objects.filter(pk=id).first()
         if not obj:
             return redirect(self.get_search_url())
@@ -482,9 +489,10 @@ class CadminConfig(object):
         from django.http import QueryDict
         qd = QueryDict(mutable=True)
         qd["list_filter"] = params.urlencode()  # qd: {"list_filter":"a%21341%1234b%21322"}
-        s = mark_safe("<a href='%s?%s'>%s</a>" % (self.get_modify_url(obj), qd.urlencode(), val))
-        return s
+        tags = mark_safe("<a href='%s?%s'>%s</a>" % (self.get_modify_url(obj), qd.urlencode(), val))
+        return tags
 
+    search_fields = []
     def get_search_condition(self):
         # get the user's search keyword'
         from django.db.models import Q
@@ -511,19 +519,28 @@ class CadminSite(object):
 
         :param model_class: model to register
         :param cadmin_config_class: model's admin
-        :return:
         """
+
+
+        # if you didn't set a cadminConfig in your cadmin.py the default CadminConfig will work
+        # or will use the custom config in your cadmin.py
         if not cadmin_config_class:
             cadmin_config_class = CadminConfig
         self._registry[model_class] = cadmin_config_class(model_class, self)
+        # {user: CadminConfig(User, self)} self---> CadminSite
+        # TODO: self?
 
     def get_urls(self):
-        # get urls by url method
+        """
+        get urls by url method, model_class is a model you defined in you models.py
+        :return:
+        """
         url_pattern = []
-        for model_class, cadmin_config_obj in self._registry.items():  # {User: UserConfig}
+        # model_class ---> Model  model_class_config --> Model's config
+        for model_class, model_class_config in self._registry.items():  # {User: UserConfig}
             app_name, model_name = model_class._meta.app_label, model_class._meta.model_name
 
-            model_url = url(r'^%s/%s/' % (app_name, model_name,), (cadmin_config_obj.urls, None, None))
+            model_url = url(r'^%s/%s/' % (app_name, model_name,), (model_class_config.urls, None, None))
             # UserConfig <-- CadminConfig ---> User.urls---> get all of the urls from CadminConfig
             url_pattern.append(model_url)
         return url_pattern
@@ -531,8 +548,8 @@ class CadminSite(object):
     @property
     def urls(self):
         return (self.get_urls(), None, 'cadmin')
+        # TODO: None, cadmin ?
 
-        # Instance of CadminSite
 
-
+# Instance of CadminSite
 site = CadminSite()
